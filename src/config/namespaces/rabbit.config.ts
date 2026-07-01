@@ -9,5 +9,6 @@ export const rabbitConfig = registerAs('rabbit', () => {
     exchange: env.SENDER_RABBIT_EXCHANGE_NAME,
     queue: env.SENDER_RABBIT_QUEUE_NAME,
     routingKey: env.SENDER_RABBIT_QUEUE_ROUTING_KEY,
+    prefetch: env.RABBIT_PREFETCH,
   };
 });

@@ -36,6 +36,7 @@ export const envSchema = z
       .min(1)
       .default('google_email_sender_queue'),
     SENDER_RABBIT_QUEUE_ROUTING_KEY: z.string().min(1).default('email_sender'),
+    RABBIT_PREFETCH: z.coerce.number().int().positive().default(10),
 
     // Email behavior
     EMAIL_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),

@@ -5,16 +5,16 @@ import { AppConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 import { EmailModule } from './email/email.module';
 import { HealthController } from './health/health.controller';
-import { AppRabbitMQModule } from './rabbitmq/rabbitmq.module';
 
-/** Root module: config, clock, database, RabbitMQ, scheduling, and the email domain. */
+/** Root module: config, clock, database, scheduling, and the email domain. */
+// The RabbitMQ consumer is a native NestJS microservice (Transport.RMQ) wired in `main.ts` via
+// `app.connectMicroservice`; there is no broker module to import here (the app never publishes).
 @Module({
   imports: [
     AppConfigModule,
     ClockModule,
     ScheduleModule.forRoot(),
     DatabaseModule,
-    AppRabbitMQModule,
     EmailModule,
   ],
   controllers: [HealthController],
