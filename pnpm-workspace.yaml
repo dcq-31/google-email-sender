@@ -1,0 +1,9 @@
+# These transitive deps ship native build scripts. None are required at runtime
+# (each has a pure-JS fallback; ssh2/cpu-features/unrs-resolver are dev/test-only via
+# testcontainers & eslint). Explicitly skipping their build scripts stops pnpm from
+# failing `pnpm install --frozen-lockfile` with ERR_PNPM_IGNORED_BUILDS in CI/Docker.
+ignoredBuiltDependencies:
+  - cpu-features
+  - protobufjs
+  - ssh2
+  - unrs-resolver
