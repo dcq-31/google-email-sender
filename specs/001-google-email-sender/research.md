@@ -54,13 +54,19 @@ Decision log for the non-obvious technical choices. Each entry: decision, why, a
   We treat per-tenant uniqueness as the correct interpretation for a multi-tenant deployment and
   record it here (Clarification C1 in `spec.md`).
 
-## RabbitMQ client: @golevelup/nestjs-rabbitmq
+## RabbitMQ client: native @nestjs/microservices (Transport.RMQ)
 
-- **Decision:** `@golevelup/nestjs-rabbitmq` with `@RabbitSubscribe`.
-- **Why:** Gives direct control over the **exact** exchange / queue / routing-key named in the
-  requirement and over **manual ack/nack**, which the Inbox pattern needs (ACK only after commit).
-- **Alternatives:** `@nestjs/microservices` RMQ transport imposes its own message envelope and is
-  awkward for messages produced by an external Outbox; raw `amqplib` is more boilerplate.
+- **Decision:** NestJS's native `Transport.RMQ` (`@nestjs/microservices`, over `amqplib` /
+  `amqp-connection-manager`), run as a **hybrid app** (HTTP `/health` + RMQ microservice). Ingest is an
+  `@EventPattern` controller with **manual ack/nack** via `RmqContext` (`noAck: false`) — ACK only after
+  a durable commit, exactly what the Inbox needs. The exact exchange / queue / routing-key come from the
+  transport options (`exchange`, `exchangeType: 'topic'`, `routingKey`).
+- **The envelope problem, solved:** the native transport normally expects a `{ pattern, data }` envelope,
+  awkward for an external Outbox that publishes bare JSON. A small custom `InboundEmailDeserializer` maps
+  the raw payload to `{ pattern: EMAIL_SENDER_ROUTING_KEY, data }`, so producers publish unchanged.
+- **History:** v1 used `@golevelup/nestjs-rabbitmq` (`@RabbitSubscribe`); it was later replaced with the
+  native transport — same guarantees (exact binding + manual ack), one fewer third-party dependency.
+- **Alternatives:** raw `amqplib` — more boilerplate; `@golevelup/nestjs-rabbitmq` — the prior choice.
 
 ## Email transport: Gmail API + OAuth2
 

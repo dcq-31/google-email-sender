@@ -31,9 +31,9 @@ Ordered, test-first. `[P]` = parallelizable with siblings. Each task lists the A
 
 ## Phase 3 — Ingest (Inbox)
 - [x] **T030** `IncomingEmailDto` + validation matching the contract. *Test:* unit — accepts valid, rejects malformed. (AC-1.3)
-- [x] **T031** `EmailIngestConsumer` `@RabbitSubscribe(exchange/queue/routingKey from env)`:
-      persist→ACK; duplicate→ACK no-op; invalid→nack(no requeue); infra error→nack(requeue).
-      *Test:* integration — AC-1.1/1.2/2.1/2.2.
+- [x] **T031** `EmailIngestController` `@EventPattern(EMAIL_SENDER_ROUTING_KEY)` + `EmailIngestService.ingest()`
+      + `InboundEmailDeserializer`: persist→ACK; duplicate→ACK no-op; invalid→nack(no requeue); infra error→nack(requeue).
+      ack/nack is manual via `RmqContext` (`noAck: false`). *Test:* unit (`ingest()` decisions) + e2e — AC-1.1/1.2/2.1/2.2.
 
 ## Phase 4 — Send
 - [x] **T040** `MailerPort` + `MAILER` token; `FakeMailer` (records sends; can be told to fail).
@@ -48,10 +48,16 @@ Ordered, test-first. `[P]` = parallelizable with siblings. Each task lists the A
       *Test:* integration — AC-6.1/6.2/6.3 with `FakeClock`.
 
 ## Phase 6 — Wiring & E2E
-- [x] **T060** `AppModule`, `RabbitMQModule`, `main.ts` bootstrap; `cli.ts` + `CliModule`.
+- [x] **T060** `AppModule`; native `Transport.RMQ` attached in `main.ts` (hybrid app: `connectMicroservice` + `startAllMicroservices`); `cli.ts` + `CliModule`.
 - [x] **T061** E2E happy path: publish → row `pending` → worker → `success` (FakeMailer). All AC-3.
 - [x] **T062** E2E retry path: mailer fails once → `pending` + backoff → advance clock → `success`. AC-4.
 - [x] **T063** E2E dedupe: publish same `messageId` twice → one row, one send. AC-2.
+
+## Phase 8 — Native transport migration (post-conversion)
+- [x] **T080** Replace `@golevelup/nestjs-rabbitmq` with native `@nestjs/microservices` (`Transport.RMQ`):
+      `EmailIngestController` `@EventPattern` + `EmailIngestService` (`ack|drop|requeue`) +
+      `InboundEmailDeserializer`; manual ack/nack via `RmqContext`; hybrid app keeps `/health`; add
+      `RABBIT_PREFETCH`. Message contract and all guarantees unchanged. *Test:* unit + e2e green.
 
 ## Phase 7 — Docs / analyze
 - [x] **T070** `CLAUDE.md` accurate to scripts/structure; README run section.

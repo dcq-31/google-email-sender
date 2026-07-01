@@ -10,7 +10,7 @@ Implements [`spec.md`](./spec.md). Governed by [`../../.specify/memory/constitut
 | Framework | NestJS 11 |
 | Database | PostgreSQL `17.5-alpine3.21` |
 | ORM / migrations | TypeORM 1.x (`pg` driver) |
-| Messaging | `@golevelup/nestjs-rabbitmq` |
+| Messaging | `@nestjs/microservices` (`Transport.RMQ`) + `amqplib` / `amqp-connection-manager` |
 | Email | Gmail API via `googleapis` (OAuth2) |
 | Scheduling | `@nestjs/schedule` (`@Interval` worker loop) |
 | CLI | `nest-commander` (cleanup command) |
@@ -22,8 +22,8 @@ Implements [`spec.md`](./spec.md). Governed by [`../../.specify/memory/constitut
 
 ```
 src/
-  main.ts                          # bootstrap: HTTP (health) + Rabbit consumer + scheduler
-  app.module.ts                    # wires Config, Database, RabbitMQ, Email modules
+  main.ts                          # bootstrap: hybrid app — HTTP (health) + native RMQ microservice + scheduler
+  app.module.ts                    # wires Config, Database, Email modules (RMQ transport attached in main.ts)
   config/
     configuration.ts               # typed config factory (namespaces: app, db, rabbit, gmail, email)
     env.validation.ts              # zod schema; validate() fails fast at boot
@@ -45,9 +45,13 @@ src/
       mailer.port.ts               # MailerPort interface + MAILER token
       gmail-mailer.service.ts      # googleapis OAuth2 implementation
     ingest/
-      email-ingest.consumer.ts     # @RabbitSubscribe -> repo.insertPending; dedupe; ack/nack
+      email-ingest.controller.ts   # @EventPattern -> EmailIngestService; ack/nack via RmqContext
+      email-ingest.service.ts      # ingest(msg): 'ack'|'drop'|'requeue' (validate -> insertPending; dedupe)
+      email-ingest.constants.ts    # EMAIL_SENDER_ROUTING_KEY (shared by @EventPattern + RMQ binding)
     worker/
       email-worker.service.ts      # @Interval poll loop: claimBatch -> send -> markSuccess|Retry|Failed
+  rabbitmq/
+    inbound-email.deserializer.ts  # maps raw producer JSON -> { pattern, data } for the RMQ transport
   commands/
     cleanup.command.ts             # nest-commander: email:cleanup (batched delete)
     cli.module.ts                  # module bootstrapped by the CLI entrypoint
@@ -75,10 +79,13 @@ test/
 `GMAIL_*` OAuth2 creds, `WORKER_POLL_INTERVAL_MS`, `WORKER_CLAIM_BATCH_SIZE`.
 
 ### Ingest consumer (Inbox)
-`@RabbitSubscribe({ exchange, queue, routingKey })`. Validates payload → `repo.insertPending`.
-Catches unique-violation (`23505`) → log + ACK (duplicate no-op). Schema-invalid → `nack(requeue=false)`.
-Other errors → rethrow → `nack(requeue=true)`. (golevelup ACKs on resolve, nacks on throw; we set
-`errorHandler`/`nack` options accordingly.)
+Native `@nestjs/microservices` `Transport.RMQ` (hybrid app; `/health` stays on HTTP). A custom
+`InboundEmailDeserializer` maps the producer's raw JSON → `{ pattern: EMAIL_SENDER_ROUTING_KEY, data }`.
+`EmailIngestController.@EventPattern(EMAIL_SENDER_ROUTING_KEY)` delegates to `EmailIngestService.ingest()`,
+which validates → `repo.insertPending`, catches unique-violation (`23505`) → log + duplicate no-op, and
+returns `'ack' | 'drop' | 'requeue'`. The controller maps that decision to **manual** `channel.ack(msg)` /
+`channel.nack(msg, false, requeue)` via `RmqContext` (`noAck: false`): schema-invalid → `drop`
+(`nack(requeue=false)`), transient error → `requeue` (`nack(requeue=true)`), stored/duplicate → `ack`.
 
 ### Worker (claim → send → resolve)
 `@Interval(WORKER_POLL_INTERVAL_MS)` calls `repo.claimBatch(now, batch)` (atomic CTE w/ SKIP LOCKED).
