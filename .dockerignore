@@ -1,0 +1,26 @@
+# Build artifacts & deps are produced inside the image — never copy the host's.
+node_modules
+dist
+coverage
+
+# Local secrets / env (env is passed in at runtime).
+.env
+.env.*
+
+# Tests & spec docs are not needed in the production image.
+test
+specs
+.specify
+
+# Docs & editor/VCS noise.
+*.md
+.git
+.gitignore
+.prettierrc
+eslint.config.mjs
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Keep: package.json, pnpm-lock.yaml, pnpm-workspace.yaml (needed for --frozen-lockfile),
+#       tsconfig*.json, nest-cli.json, src/ — all copied explicitly by the Dockerfile.
