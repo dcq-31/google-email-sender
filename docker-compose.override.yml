@@ -1,0 +1,17 @@
+# Local-development overrides — auto-loaded by `docker compose` when no `-f` flags are passed.
+#
+# Publishes the Postgres and RabbitMQ ports to the host so host-run tooling can reach them on
+# localhost: `psql`, `pnpm start:dev`, `pnpm migration:run`, and the RabbitMQ management UI.
+#
+# Production does NOT use this file — it runs with explicit files:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# which leaves the datastore and broker reachable only on the internal Docker network.
+services:
+  postgres:
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+  rabbitmq:
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"       # AMQP
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672" # management UI (http://localhost:15672)

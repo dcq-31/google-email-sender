@@ -1,0 +1,50 @@
+# Production overrides. Apply explicitly on top of the base file:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Because it is invoked with explicit `-f` files, docker-compose.override.yml is NOT loaded, so
+# Postgres and RabbitMQ are reachable only on the internal Docker network (no host port publishing).
+# Provide production config/secrets via `.env` or your orchestrator's secret store —
+# see .env.production.example. `NODE_ENV=production` makes SMTP_USER/SMTP_PASSWORD mandatory
+# (fail-fast validation at boot).
+services:
+  postgres:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  rabbitmq:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  app:
+    restart: always
+    environment:
+      # Overrides NODE_ENV from .env — enforces the fail-fast SMTP credential check.
+      NODE_ENV: production
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
