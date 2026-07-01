@@ -11,7 +11,7 @@ Implements [`spec.md`](./spec.md). Governed by [`../../.specify/memory/constitut
 | Database | PostgreSQL `17.5-alpine3.21` |
 | ORM / migrations | TypeORM 1.x (`pg` driver) |
 | Messaging | `@nestjs/microservices` (`Transport.RMQ`) + `amqplib` / `amqp-connection-manager` |
-| Email | Gmail API via `googleapis` (OAuth2) |
+| Email | SMTP via `nodemailer` (Gmail SMTP + App Password) |
 | Scheduling | `@nestjs/schedule` (`@Interval` worker loop) |
 | CLI | `nest-commander` (cleanup command) |
 | Config validation | `zod` + `@nestjs/config` |
@@ -25,7 +25,7 @@ src/
   main.ts                          # bootstrap: hybrid app — HTTP (health) + native RMQ microservice + scheduler
   app.module.ts                    # wires Config, Database, Email modules (RMQ transport attached in main.ts)
   config/
-    configuration.ts               # typed config factory (namespaces: app, db, rabbit, gmail, email)
+    configuration.ts               # typed config factory (namespaces: app, db, rabbit, smtp, email)
     env.validation.ts              # zod schema; validate() fails fast at boot
   common/clock/
     clock.ts                       # CLOCK token + Clock interface { now(): Date }
@@ -43,7 +43,7 @@ src/
     email.repository.ts            # insertPending, claimBatch, markSuccess, markRetry, markFailed, deleteOldSuccess
     mailer/
       mailer.port.ts               # MailerPort interface + MAILER token
-      gmail-mailer.service.ts      # googleapis OAuth2 implementation
+      smtp-mailer.service.ts       # nodemailer SMTP implementation
     ingest/
       email-ingest.controller.ts   # @EventPattern -> EmailIngestService; ack/nack via RmqContext
       email-ingest.service.ts      # ingest(msg): 'ack'|'drop'|'requeue' (validate -> insertPending; dedupe)
@@ -76,7 +76,7 @@ test/
 ### Config
 `zod` schema validates `process.env` at boot (fail-fast). Exposed as typed namespaces via
 `@nestjs/config`. Covers the spec's behavioral vars plus `DATABASE_URL`,
-`GMAIL_*` OAuth2 creds, `WORKER_POLL_INTERVAL_MS`, `WORKER_CLAIM_BATCH_SIZE`.
+`SMTP_*` creds (host/port/secure/user/password/from), `WORKER_POLL_INTERVAL_MS`, `WORKER_CLAIM_BATCH_SIZE`.
 
 ### Ingest consumer (Inbox)
 Native `@nestjs/microservices` `Transport.RMQ` (hybrid app; `/health` stays on HTTP). A custom
@@ -95,8 +95,10 @@ For each claimed row: `mailer.send(...)`. On success → `markSuccess`. On error
 never runs concurrently with itself in one instance.
 
 ### Mailer (Ports & adapters)
-`MailerPort.send({ recipient, subject, body })`. `GmailMailerService` builds an RFC-822 message,
-base64url-encodes it, calls `gmail.users.messages.send({ userId: 'me', requestBody: { raw } })`.
+`MailerPort.send({ recipient, subject, body })`. `SmtpMailerService` calls
+`transport.sendMail({ from, to: recipient, subject, html: body })` via `nodemailer` (Gmail SMTP + App
+Password by default); nodemailer builds the MIME message and RFC 2047-encodes non-ASCII subjects. The
+real transport is verified against a Mailpit container (`test/integration/smtp-mailer.int-spec.ts`).
 
 ### Cleanup command
 `nest-commander` command `email:cleanup`: loops `repo.deleteOldSuccess(olderThan, batchSize)`

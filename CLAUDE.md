@@ -5,7 +5,8 @@ Project context for AI assistants. Read this first, then the spec under
 
 ## What this is
 
-A shared, multi-tenant NestJS microservice that sends emails **via the Gmail API**. Producers
+A shared, multi-tenant NestJS microservice that sends emails **via SMTP** (Gmail SMTP + App Password
+by default; any SMTP server works). Producers
 (one deployment per tenant) publish send-requests to **RabbitMQ** using the Outbox pattern; this
 service implements the **Inbox pattern** — dedupe, persist, retry, audit — and a retention cleanup.
 
@@ -24,7 +25,7 @@ of truth: change the spec/plan/data-model **before** changing behavior, then kee
 | Persistence (claim/transitions) | [src/email/email.repository.ts](src/email/email.repository.ts) |
 | Ingest (Inbox consumer) | [src/email/ingest/email-ingest.consumer.ts](src/email/ingest/email-ingest.consumer.ts) |
 | Worker (claim→send→resolve) | [src/email/worker/email-worker.service.ts](src/email/worker/email-worker.service.ts) |
-| Mailer port + Gmail adapter | [src/email/mailer/](src/email/mailer/) |
+| Mailer port + SMTP adapter | [src/email/mailer/](src/email/mailer/) |
 | Cleanup CLI command | [src/commands/cleanup.command.ts](src/commands/cleanup.command.ts) |
 | Test doubles (FakeClock, FakeMailer, Testcontainers) | [test/support/](test/support/) |
 
@@ -38,7 +39,7 @@ of truth: change the spec/plan/data-model **before** changing behavior, then kee
 4. **Test-first** — pure logic → unit; persistence/concurrency → integration (real Postgres); the
    broker→DB→send path → e2e.
 5. **Config** — env-only, validated at boot (fail-fast), no secrets in git.
-6. **Ports & adapters** — the worker depends on `MailerPort`, not on `googleapis`.
+6. **Ports & adapters** — the worker depends on `MailerPort`, not on `nodemailer`.
 
 ## Gotchas (learned while building)
 
@@ -49,6 +50,10 @@ of truth: change the spec/plan/data-model **before** changing behavior, then kee
 - Status enum value is **`fail`** (not "failed"), matching the requirement's enum list.
 - Migrations & CLI run through ts-node (`typeorm-ts-node-commonjs`); the standalone DataSource
   loads `.env` via Node's `process.loadEnvFile`.
+- **Mailer is SMTP via nodemailer** (`SmtpMailerService`) — nodemailer builds the MIME message and
+  RFC 2047-encodes non-ASCII subjects, so there is no hand-rolled MIME. The real send path is covered
+  by an integration test against a **Mailpit** container (`test/support/mailpit.testcontainer.ts`,
+  `test/integration/smtp-mailer.int-spec.ts`); unit and e2e tests still use `FakeMailer`.
 
 ## Commands
 
@@ -58,6 +63,7 @@ docker compose up -d postgres rabbitmq   # dependencies only (for host-run dev)
 pnpm migration:run                   # apply migrations
 pnpm start:dev                       # run consumer + worker + health endpoint
 pnpm cli email:cleanup               # prune old success rows
+pnpm cli email:send-test <to>        # send one test email via the configured SMTP mailer
 
 # Full stack in Docker (deps + one-shot `migrate` + `app` on :3000, /health probe):
 docker compose up -d --build         # app waits for `migrate` to complete before starting
@@ -73,7 +79,10 @@ separate step via the standard `typeorm` CLI against compiled `dist/database/dat
 (`migration:run:prod`) — never on app boot. The prod image runs `node dist/main.js`.
 
 Env: copy `.env.example` → `.env`. On a host where 5432 is taken, set `POSTGRES_PORT` and the
-matching `DATABASE_URL` port (this repo's `.env` uses 5440 locally).
+matching `DATABASE_URL` port (this repo's `.env` uses 5440 locally). For real sending set
+`SMTP_USER`/`SMTP_PASSWORD` to a Gmail address + App Password; for local dev without real creds,
+run the optional `mailpit` compose service and point `SMTP_HOST=localhost SMTP_PORT=1025 SMTP_SECURE=false`
+(catch mail at http://localhost:8025).
 
 ## Conventions
 

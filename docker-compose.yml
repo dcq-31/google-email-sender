@@ -54,7 +54,7 @@ services:
     image: google-email-sender
     container_name: ges_app
     restart: unless-stopped
-    # GMAIL_* and behavior knobs come from .env; the two URLs below override the
+    # SMTP_* and behavior knobs come from .env; the two URLs below override the
     # localhost values in .env because in-network hosts are the service names.
     env_file: .env
     environment:
@@ -70,6 +70,19 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+
+  # Optional local SMTP catcher for dev — not started by the default `up` (opt-in via its profile).
+  # Start with:  docker compose --profile mail up -d mailpit
+  # Then point the app at it:  SMTP_HOST=localhost SMTP_PORT=1025 SMTP_SECURE=false
+  # Web UI / REST API: http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:v1.20
+    container_name: ges_mailpit
+    restart: unless-stopped
+    profiles: ["mail"]
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # HTTP UI / API
 
 volumes:
   pgdata:

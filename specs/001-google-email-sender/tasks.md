@@ -37,8 +37,9 @@ Ordered, test-first. `[P]` = parallelizable with siblings. Each task lists the A
 
 ## Phase 4 — Send
 - [x] **T040** `MailerPort` + `MAILER` token; `FakeMailer` (records sends; can be told to fail).
-- [x] **T041** `GmailMailerService` builds RFC-822 → base64url → `users.messages.send`.
-      *Test:* unit — raw message is well-formed (To/Subject/body), googleapis client mocked.
+- [x] **T041** `SmtpMailerService` sends via `nodemailer` (`transport.sendMail({ from, to, subject, html })`).
+      *Test:* unit — OutboundEmail→message mapping via `jsonTransport` (offline); integration — real send
+      against a Mailpit container asserts To/Subject (non-ASCII round-trip)/HTML via its REST API.
 - [x] **T042** `EmailWorkerService` `@Interval` loop: claim→send→resolve; overlap guard.
       *Test:* unit — success→`success`; fail<MAX→`pending`+backoff; fail==MAX→`fail` (fake repo/mailer/clock).
       AC-3.3/4.1/4.2/4.3/5.1.

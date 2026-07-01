@@ -68,11 +68,18 @@ Decision log for the non-obvious technical choices. Each entry: decision, why, a
   native transport — same guarantees (exact binding + manual ack), one fewer third-party dependency.
 - **Alternatives:** raw `amqplib` — more boilerplate; `@golevelup/nestjs-rabbitmq` — the prior choice.
 
-## Email transport: Gmail API + OAuth2
+## Email transport: SMTP + App Password (nodemailer)
 
-- **Decision:** `googleapis` Gmail API (`users.messages.send`) behind a `MailerPort` interface.
-- **Why:** Official, first-party Google path; the port keeps the worker vendor-agnostic and lets
-  tests inject a fake mailer (no network). v1 uses a single OAuth2 refresh token from env.
+- **Decision:** `nodemailer` over SMTP (Gmail SMTP by default) behind a `MailerPort` interface.
+  `SmtpMailerService` calls `transport.sendMail({ from, to, subject, html })`; nodemailer builds the
+  MIME message and RFC 2047-encodes non-ASCII subjects.
+- **Why:** Far simpler and more testable auth than the Gmail API. Gmail SMTP needs only 2FA + a
+  16-char **App Password** (`SMTP_USER`/`SMTP_PASSWORD`) — no Google Cloud project, OAuth consent
+  screen, or refresh token that silently expires. The port keeps the worker vendor-agnostic, so the
+  real transport is verified against a local **Mailpit** container while unit/e2e tests inject a fake
+  mailer (no network).
+- **Alternatives:** Gmail API + OAuth2 (`googleapis`, the prior choice) — first-party but the OAuth2
+  refresh-token setup is heavy and hard to test; service-account + domain-wide delegation — Workspace-only.
 
 ## Cleanup as a CLI command: nest-commander
 

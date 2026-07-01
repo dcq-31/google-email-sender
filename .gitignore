@@ -19,3 +19,6 @@ pnpm-debug.log*
 .idea/
 .vscode/
 *.swp
+
+# Study Guides
+/study

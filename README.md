@@ -1,6 +1,7 @@
 # google-email-sender
 
-A shared, multi-tenant **NestJS** microservice that sends emails via the **Gmail API**. Send-requests
+A shared, multi-tenant **NestJS** microservice that sends emails via **SMTP** (Gmail SMTP + App
+Password by default). Send-requests
 arrive over **RabbitMQ** (producers use the Outbox pattern); this service implements the **Inbox
 pattern** — deduplicate, persist, retry with backoff, and audit — backed by **PostgreSQL 17.5**.
 
@@ -25,7 +26,7 @@ Markdown, then the code and tests are implemented against it.
 
 ```bash
 pnpm install
-cp .env.example .env                 # fill in GMAIL_* for real sending
+cp .env.example .env                 # set SMTP_USER + SMTP_PASSWORD for real sending
 docker compose up -d postgres rabbitmq   # dependencies only
 pnpm migration:run
 pnpm start:dev                       # consumer + worker + /health
@@ -46,8 +47,8 @@ curl -s localhost:3000/health              # {"status":"ok"}
 ```
 
 Migrations run as a separate, ordered step (`app` waits for `migrate` to complete) — the app never
-applies schema changes on boot. Set `NODE_ENV=production` in `.env` only once `GMAIL_*` is filled,
-or the app exits at boot by design (fail-fast config).
+applies schema changes on boot. Set `NODE_ENV=production` in `.env` only once `SMTP_USER`/`SMTP_PASSWORD`
+are filled, or the app exits at boot by design (fail-fast config).
 
 ## Tests
 
@@ -60,5 +61,17 @@ pnpm test:e2e            # end-to-end — Postgres + RabbitMQ via Testcontainers
 ## Operations
 
 ```bash
-pnpm cli email:cleanup   # prune success emails older than EMAIL_SUCCESS_RETENTION_DAYS
+pnpm cli email:cleanup           # prune success emails older than EMAIL_SUCCESS_RETENTION_DAYS
+pnpm cli email:send-test <to>    # send one test email through the configured SMTP mailer
 ```
+
+`email:send-test` sends through whatever `SMTP_*` is in `.env`, so a success means the real sender
+works. To try it with no real credentials, point it at a local Mailpit:
+
+```bash
+docker compose --profile mail up -d mailpit
+SMTP_HOST=localhost SMTP_PORT=1025 SMTP_SECURE=false pnpm cli email:send-test you@example.com
+# -> "Test email sent successfully."; view it at http://localhost:8025
+```
+
+Omit `<to>` to send to yourself (defaults to `SMTP_FROM`/`SMTP_USER`); override with `--subject` / `--body`.

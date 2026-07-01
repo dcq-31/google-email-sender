@@ -6,7 +6,7 @@
 ## 1. Install & configure
 ```bash
 pnpm install
-cp .env.example .env       # then fill in GMAIL_* OAuth2 credentials
+cp .env.example .env       # then set SMTP_USER + SMTP_PASSWORD (Gmail address + App Password)
 ```
 
 ## 2. Start infrastructure
@@ -57,4 +57,4 @@ pnpm test:e2e             # end-to-end (Testcontainers)
 ## Key env vars
 See `.env.example`. Behavioral: `EMAIL_MAX_ATTEMPTS`, `EMAIL_RETRY_BASE_DELAY_SECONDS`,
 `EMAIL_SUCCESS_RETENTION_DAYS`, `EMAIL_CLEANUP_BATCH_SIZE`. Messaging: `SENDER_RABBIT_*`.
-Ops: `DATABASE_URL`, `GMAIL_*`, `WORKER_POLL_INTERVAL_MS`, `WORKER_CLAIM_BATCH_SIZE`.
+Ops: `DATABASE_URL`, `SMTP_*`, `WORKER_POLL_INTERVAL_MS`, `WORKER_CLAIM_BATCH_SIZE`.

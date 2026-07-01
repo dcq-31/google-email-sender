@@ -28,12 +28,13 @@ No two workers may ever process the same row. This is verified by an automated c
 
 Each behavior begins with a failing test. Pure logic (backoff, state transitions) is unit-tested;
 persistence and concurrency are integration-tested against a **real Postgres** (Testcontainers);
-the full RabbitMQ→DB→send→resolve path is covered by an E2E test with a faked Gmail transport.
+the full RabbitMQ→DB→send→resolve path is covered by an E2E test with a faked mailer, and the real
+SMTP transport is covered by an integration test against a Mailpit container.
 
 ## V. Config is explicit, validated, and secret-free
 
 All configuration is read from environment variables, validated at boot with a schema, and the
-process **fails fast** on invalid/missing values. No secrets (Gmail OAuth tokens, DB passwords)
+process **fails fast** on invalid/missing values. No secrets (SMTP/App passwords, DB passwords)
 are committed. `.env.example` documents every variable; real values live only in `.env`/secrets.
 
 ## VI. Persist for audit, then prune
@@ -45,7 +46,7 @@ Failed (`fail`) rows are kept (not auto-pruned) so permanent failures stay visib
 ## VII. Ports & adapters
 
 Domain logic depends on **interfaces**, not vendors. The worker depends on `MailerPort`, not on
-`googleapis`. This keeps Gmail swappable and lets tests inject a fake mailer with zero network I/O.
+`nodemailer`. This keeps the transport swappable and lets tests inject a fake mailer with zero network I/O.
 
 ## VIII. Observable
 
