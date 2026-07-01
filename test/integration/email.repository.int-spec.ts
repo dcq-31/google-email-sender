@@ -41,7 +41,7 @@ describe('EmailRepository (integration, real Postgres)', () => {
   beforeEach(async () => {
     await truncateEmails(dataSource);
     clock = new FakeClock('2026-06-30T00:00:00.000Z');
-    repo = new EmailRepository(dataSource, clock);
+    repo = new EmailRepository(dataSource.getRepository(Email), clock);
   });
 
   const find = (id: string) =>

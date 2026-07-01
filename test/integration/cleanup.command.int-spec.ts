@@ -53,7 +53,7 @@ describe('CleanupCommand (integration, real Postgres)', () => {
   beforeEach(async () => {
     await truncateEmails(dataSource);
     clock = new FakeClock('2026-06-30T00:00:00.000Z');
-    repo = new EmailRepository(dataSource, clock);
+    repo = new EmailRepository(dataSource.getRepository(Email), clock);
   });
 
   it('deletes only success rows older than retention, looping over batches (AC-6.*)', async () => {

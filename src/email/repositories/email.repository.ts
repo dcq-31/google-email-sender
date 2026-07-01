@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource, QueryFailedError, Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
 import { CLOCK, type Clock } from '../../common/clock/clock';
 import { Email } from '../entities/email.entity';
@@ -27,17 +27,6 @@ export interface ClaimedEmail {
   failureCount: number;
 }
 
-/** Postgres unique-violation SQLSTATE. */
-const PG_UNIQUE_VIOLATION = '23505';
-
-function isUniqueViolation(err: unknown): boolean {
-  if (err instanceof QueryFailedError) {
-    const driverError = err.driverError as { code?: string } | undefined;
-    return driverError?.code === PG_UNIQUE_VIOLATION;
-  }
-  return (err as { code?: string })?.code === PG_UNIQUE_VIOLATION;
-}
-
 /**
  * All persistence for the Inbox table. Time is always supplied by the {@link Clock}, never SQL
  * `now()` (Constitution II). Row claiming is atomic and concurrency-safe (Constitution III).
@@ -45,13 +34,9 @@ function isUniqueViolation(err: unknown): boolean {
 @Injectable()
 export class EmailRepository {
   constructor(
-    @InjectDataSource() private readonly dataSource: DataSource,
+    @InjectRepository(Email) private readonly repo: Repository<Email>,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
-
-  private get repo(): Repository<Email> {
-    return this.dataSource.getRepository(Email);
-  }
 
   /**
    * Inserts a new `pending` row. Returns `{ created: false }` when the message is a duplicate
@@ -62,8 +47,13 @@ export class EmailRepository {
   ): Promise<{ created: boolean; id: string | null }> {
     const now = this.clock.now();
     const id = uuidv7();
-    try {
-      await this.repo.insert({
+    // `orIgnore()` → `ON CONFLICT DO NOTHING`: a duplicate `(tenant_id, message_id)` inserts no
+    // row and returns nothing, so `raw.length === 0` is the Inbox no-op (no exception to catch).
+    const result = await this.repo
+      .createQueryBuilder()
+      .insert()
+      .into(Email)
+      .values({
         id,
         ...input,
         status: EmailStatus.Pending,
@@ -72,14 +62,12 @@ export class EmailRepository {
         sentAt: null,
         failureCount: 0,
         lastErrorMessage: null,
-      });
-      return { created: true, id };
-    } catch (err) {
-      if (isUniqueViolation(err)) {
-        return { created: false, id: null };
-      }
-      throw err;
-    }
+      })
+      .orIgnore()
+      .returning(['id'])
+      .execute();
+    const created = (result.raw as unknown[]).length > 0;
+    return { created, id: created ? id : null };
   }
 
   /**
@@ -96,7 +84,7 @@ export class EmailRepository {
       subject: string;
       body: string;
       failure_count: number;
-    }> = await this.dataSource.query(
+    }> = await this.repo.query(
       `WITH claimed AS (
          UPDATE emails
             SET status = 'processing', sent_at = $1
@@ -166,22 +154,24 @@ export class EmailRepository {
    * Returns the number deleted (0 means nothing left to prune).
    */
   async deleteOldSuccess(olderThan: Date, batchSize: number): Promise<number> {
-    // Data-modifying CTE + top-level SELECT count(*), so query() returns an unambiguous row count
-    // (a bare DELETE ... RETURNING yields a [rows, affected] tuple under TypeORM).
-    const result: Array<{ deleted: number }> = await this.dataSource.query(
-      `WITH del AS (
-         DELETE FROM emails
-          WHERE id IN (
-              SELECT id FROM emails
-               WHERE status = 'success' AND sent_at < $1
-               ORDER BY sent_at
-               LIMIT $2
-            )
-        RETURNING id
-       )
-       SELECT count(*)::int AS deleted FROM del`,
-      [olderThan, batchSize],
-    );
-    return Number(result[0]?.deleted ?? 0);
+    // Postgres has no `DELETE ... LIMIT`, so batch via `id IN (SELECT ... LIMIT n)`.
+    // `DeleteResult.affected` is the deleted row count (no CTE / count(*) needed).
+    const ids = this.repo
+      .createQueryBuilder('e')
+      .select('e.id')
+      .where('e.status = :status', { status: EmailStatus.Success })
+      .andWhere('e.sentAt < :olderThan', { olderThan })
+      .orderBy('e.sentAt', 'ASC')
+      .limit(batchSize);
+
+    const result = await this.repo
+      .createQueryBuilder()
+      .delete()
+      .from(Email)
+      .where(`id IN (${ids.getQuery()})`)
+      .setParameters(ids.getParameters())
+      .execute();
+
+    return result.affected ?? 0;
   }
 }
