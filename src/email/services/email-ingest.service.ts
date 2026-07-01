@@ -4,7 +4,7 @@ import {
   InvalidMessageError,
   parseIncomingEmail,
 } from '../dto/incoming-email.dto';
-import { EmailRepository } from '../email.repository';
+import { EmailRepository } from '../repositories/email.repository';
 
 /**
  * What the transport adapter should do with an inbound message once ingest has decided:

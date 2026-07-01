@@ -8,9 +8,12 @@ import {
 import { type ConfigType } from '@nestjs/config';
 import { CLOCK, type Clock } from '../../common/clock/clock';
 import { emailConfig, workerConfig } from '../../config/namespaces';
-import { type ClaimedEmail, EmailRepository } from '../email.repository';
-import { MAILER, type MailerPort } from '../mailer/mailer.port';
-import { computeNextAttemptAt } from '../retry/backoff';
+import {
+  type ClaimedEmail,
+  EmailRepository,
+} from '../repositories/email.repository';
+import { MAILER, type MailerPort } from '../interfaces/mailer.port';
+import { computeNextAttemptAt } from '../helpers/backoff';
 
 /**
  * Polls for due `pending` rows, claims them atomically, sends each, and resolves the row to

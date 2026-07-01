@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { type ConfigType } from '@nestjs/config';
 import { createTransport, type Transporter } from 'nodemailer';
 import { smtpConfig } from '../../config/namespaces';
-import { MailerPort, OutboundEmail } from './mailer.port';
+import { MailerPort, OutboundEmail } from '../interfaces/mailer.port';
 
 /**
  * {@link MailerPort} backed by SMTP via nodemailer (e.g. Gmail SMTP + App Password).

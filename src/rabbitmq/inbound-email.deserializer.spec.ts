@@ -1,4 +1,4 @@
-import { EMAIL_SENDER_ROUTING_KEY } from '../email/ingest/email-ingest.constants';
+import { EMAIL_SENDER_ROUTING_KEY } from '../email/constants/email-ingest.constants';
 import { InboundEmailDeserializer } from './inbound-email.deserializer';
 
 describe('InboundEmailDeserializer', () => {

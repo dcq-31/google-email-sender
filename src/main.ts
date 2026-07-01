@@ -4,7 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { type MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { AppModule } from './app.module';
 import { appConfig, rabbitConfig } from './config/namespaces';
-import { EMAIL_SENDER_ROUTING_KEY } from './email/ingest/email-ingest.constants';
+import { EMAIL_SENDER_ROUTING_KEY } from './email/constants/email-ingest.constants';
 import { InboundEmailDeserializer } from './rabbitmq/inbound-email.deserializer';
 
 /**

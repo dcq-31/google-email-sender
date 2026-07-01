@@ -1,8 +1,8 @@
 import { Controller, Logger } from '@nestjs/common';
 import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
 import type { Channel, ConsumeMessage } from 'amqplib';
-import { EMAIL_SENDER_ROUTING_KEY } from './email-ingest.constants';
-import { EmailIngestService } from './email-ingest.service';
+import { EMAIL_SENDER_ROUTING_KEY } from '../constants/email-ingest.constants';
+import { EmailIngestService } from '../services/email-ingest.service';
 
 /**
  * RabbitMQ transport adapter for the Inbox consumer (native NestJS `Transport.RMQ`).

@@ -1,4 +1,4 @@
-import { SmtpMailerService } from '../../src/email/mailer/smtp-mailer.service';
+import { SmtpMailerService } from '../../src/email/services/smtp-mailer.service';
 import { startMailpit, StartedMailpit } from '../support/mailpit.testcontainer';
 
 /** Minimal slices of the Mailpit REST API responses we assert on. */

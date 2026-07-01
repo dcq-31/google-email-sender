@@ -4,9 +4,9 @@ import { ClockModule } from '../common/clock/clock.module';
 import { AppConfigModule } from '../config/config.module';
 import { DatabaseModule } from '../database/database.module';
 import { Email } from '../email/entities/email.entity';
-import { EmailRepository } from '../email/email.repository';
-import { MAILER } from '../email/mailer/mailer.port';
-import { SmtpMailerService } from '../email/mailer/smtp-mailer.service';
+import { EmailRepository } from '../email/repositories/email.repository';
+import { MAILER } from '../email/interfaces/mailer.port';
+import { SmtpMailerService } from '../email/services/smtp-mailer.service';
 import { CleanupCommand } from './cleanup.command';
 import { SendTestEmailCommand } from './send-test-email.command';
 

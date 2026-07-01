@@ -1,4 +1,4 @@
-import { EmailRepository } from '../email.repository';
+import { EmailRepository } from '../repositories/email.repository';
 import { EmailIngestService } from './email-ingest.service';
 
 describe('EmailIngestService', () => {

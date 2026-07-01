@@ -2,9 +2,9 @@ import { Inject, Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, QueryFailedError, Repository } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
-import { CLOCK, type Clock } from '../common/clock/clock';
-import { Email } from './entities/email.entity';
-import { EmailStatus } from './enums/email-status.enum';
+import { CLOCK, type Clock } from '../../common/clock/clock';
+import { Email } from '../entities/email.entity';
+import { EmailStatus } from '../enums/email-status.enum';
 
 /** Fields supplied by the producer when a message is ingested. */
 export interface NewEmailInput {

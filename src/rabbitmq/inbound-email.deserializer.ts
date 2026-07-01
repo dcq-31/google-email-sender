@@ -1,5 +1,5 @@
 import { Deserializer, IncomingEvent } from '@nestjs/microservices';
-import { EMAIL_SENDER_ROUTING_KEY } from '../email/ingest/email-ingest.constants';
+import { EMAIL_SENDER_ROUTING_KEY } from '../email/constants/email-ingest.constants';
 
 /**
  * Maps a raw, non-NestJS payload into the `{ pattern, data }` envelope the transport expects.

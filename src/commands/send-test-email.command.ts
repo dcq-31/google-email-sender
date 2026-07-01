@@ -2,7 +2,7 @@ import { Inject, Logger } from '@nestjs/common';
 import { type ConfigType } from '@nestjs/config';
 import { Command, CommandRunner, Option } from 'nest-commander';
 import { smtpConfig } from '../config/namespaces';
-import { MAILER, type MailerPort } from '../email/mailer/mailer.port';
+import { MAILER, type MailerPort } from '../email/interfaces/mailer.port';
 
 interface SendTestOptions {
   subject?: string;

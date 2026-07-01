@@ -1,4 +1,7 @@
-import { MailerPort, OutboundEmail } from '../../src/email/mailer/mailer.port';
+import {
+  MailerPort,
+  OutboundEmail,
+} from '../../src/email/interfaces/mailer.port';
 
 /**
  * In-memory {@link MailerPort} for tests. Records every send and can be told to fail

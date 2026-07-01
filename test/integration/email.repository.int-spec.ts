@@ -3,7 +3,7 @@ import { Email } from '../../src/email/entities/email.entity';
 import {
   EmailRepository,
   NewEmailInput,
-} from '../../src/email/email.repository';
+} from '../../src/email/repositories/email.repository';
 import { EmailStatus } from '../../src/email/enums/email-status.enum';
 import { FakeClock } from '../support/fake-clock';
 import {

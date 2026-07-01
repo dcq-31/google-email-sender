@@ -3,7 +3,7 @@ import { type ConfigType } from '@nestjs/config';
 import { Command, CommandRunner } from 'nest-commander';
 import { CLOCK, type Clock } from '../common/clock/clock';
 import { emailConfig } from '../config/namespaces';
-import { EmailRepository } from '../email/email.repository';
+import { EmailRepository } from '../email/repositories/email.repository';
 
 /**
  * Deletes `success` emails whose `sent_at` is older than `EMAIL_SUCCESS_RETENTION_DAYS`,

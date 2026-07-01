@@ -2,7 +2,10 @@ import { type ConfigType } from '@nestjs/config';
 import { FakeClock } from '../../../test/support/fake-clock';
 import { FakeMailer } from '../../../test/support/fake-mailer';
 import { emailConfig, workerConfig } from '../../config/namespaces';
-import { ClaimedEmail, EmailRepository } from '../email.repository';
+import {
+  ClaimedEmail,
+  EmailRepository,
+} from '../repositories/email.repository';
 import { EmailWorkerService } from './email-worker.service';
 
 function emailCfg(

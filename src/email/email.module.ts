@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Email } from './entities/email.entity';
-import { EmailRepository } from './email.repository';
-import { EmailIngestController } from './ingest/email-ingest.controller';
-import { EmailIngestService } from './ingest/email-ingest.service';
-import { MAILER } from './mailer/mailer.port';
-import { SmtpMailerService } from './mailer/smtp-mailer.service';
-import { EmailWorkerService } from './worker/email-worker.service';
+import { EmailRepository } from './repositories/email.repository';
+import { EmailIngestController } from './controllers/email-ingest.controller';
+import { EmailIngestService } from './services/email-ingest.service';
+import { MAILER } from './interfaces/mailer.port';
+import { SmtpMailerService } from './services/smtp-mailer.service';
+import { EmailWorkerService } from './services/email-worker.service';
 
 /**
  * Core domain module: persistence (repository), ingest (Inbox consumer via native RMQ transport),
