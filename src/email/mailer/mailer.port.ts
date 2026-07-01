@@ -7,7 +7,7 @@ export interface OutboundEmail {
 
 /**
  * Port the worker depends on to actually deliver email (Constitution VII — ports & adapters).
- * Implemented by {@link GmailMailerService} in production and by a fake in tests.
+ * Implemented by {@link SmtpMailerService} in production and by a fake in tests.
  */
 export interface MailerPort {
   /** Sends the email. Resolves on success; rejects (throws) on any failure. */

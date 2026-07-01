@@ -4,8 +4,8 @@ import { Email } from './entities/email.entity';
 import { EmailRepository } from './email.repository';
 import { EmailIngestController } from './ingest/email-ingest.controller';
 import { EmailIngestService } from './ingest/email-ingest.service';
-import { GmailMailerService } from './mailer/gmail-mailer.service';
 import { MAILER } from './mailer/mailer.port';
+import { SmtpMailerService } from './mailer/smtp-mailer.service';
 import { EmailWorkerService } from './worker/email-worker.service';
 
 /**
@@ -20,7 +20,7 @@ import { EmailWorkerService } from './worker/email-worker.service';
     EmailRepository,
     EmailIngestService,
     EmailWorkerService,
-    { provide: MAILER, useClass: GmailMailerService },
+    { provide: MAILER, useClass: SmtpMailerService },
   ],
   exports: [EmailRepository],
 })

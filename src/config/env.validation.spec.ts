@@ -52,16 +52,15 @@ describe('validateEnv', () => {
     );
   });
 
-  it('requires Gmail credentials in production', () => {
+  it('requires SMTP credentials in production', () => {
     expect(() => validateEnv({ ...baseEnv, NODE_ENV: 'production' })).toThrow(
-      /GMAIL_CLIENT_ID/,
+      /SMTP_USER/,
     );
     const ok = validateEnv({
       ...baseEnv,
       NODE_ENV: 'production',
-      GMAIL_CLIENT_ID: 'id',
-      GMAIL_CLIENT_SECRET: 'secret',
-      GMAIL_REFRESH_TOKEN: 'token',
+      SMTP_USER: 'me@gmail.com',
+      SMTP_PASSWORD: 'app-password',
     });
     expect(ok.NODE_ENV).toBe('production');
   });

@@ -62,23 +62,18 @@ export const envSchema = z
     WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(5000),
     WORKER_CLAIM_BATCH_SIZE: z.coerce.number().int().positive().default(20),
 
-    // Gmail (OAuth2)
-    GMAIL_SENDER: z.string().min(1).default('me'),
-    GMAIL_CLIENT_ID: z.string().default(''),
-    GMAIL_CLIENT_SECRET: z.string().default(''),
-    GMAIL_REFRESH_TOKEN: z.string().default(''),
-    GMAIL_REDIRECT_URI: z
-      .string()
-      .default('https://developers.google.com/oauthplayground'),
+    // SMTP (e.g. Gmail SMTP + App Password)
+    SMTP_HOST: z.string().min(1).default('smtp.gmail.com'),
+    SMTP_PORT: z.coerce.number().int().positive().default(465),
+    SMTP_SECURE: boolish.default(true), // true for 465, false for 587 (STARTTLS)
+    SMTP_USER: z.string().default(''),
+    SMTP_PASSWORD: z.string().default(''),
+    SMTP_FROM: z.string().default(''),
   })
-  // Gmail credentials are optional in dev/test (the FakeMailer is used) but mandatory in production.
+  // SMTP credentials are optional in dev/test (the FakeMailer is used) but mandatory in production.
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === 'production') {
-      for (const key of [
-        'GMAIL_CLIENT_ID',
-        'GMAIL_CLIENT_SECRET',
-        'GMAIL_REFRESH_TOKEN',
-      ] as const) {
+      for (const key of ['SMTP_USER', 'SMTP_PASSWORD'] as const) {
         if (!env[key]) {
           ctx.addIssue({
             code: 'custom',
