@@ -7,8 +7,8 @@ import {
   appConfig,
   databaseConfig,
   emailConfig,
-  gmailConfig,
   rabbitConfig,
+  smtpConfig,
   workerConfig,
 } from '../src/config/namespaces';
 import { AppModule } from '../src/app.module';
@@ -41,9 +41,9 @@ function message(messageId: string) {
     tenantName: 'Acme',
     appName: 'billing',
     messageId,
-    recipient: 'to@example.com',
+    recipient: 'adriancapote95@gmail.com',
     subject: 'Hello',
-    body: '<p>Hi</p>',
+    body: '<p>Hi bro!</p>',
   };
 }
 
@@ -59,7 +59,7 @@ async function waitFor(
   throw new Error('waitFor: condition not met within timeout');
 }
 
-describe('Email flow (e2e: RabbitMQ -> Inbox -> worker -> Gmail)', () => {
+describe('Email flow (e2e: RabbitMQ -> Inbox -> worker -> SMTP)', () => {
   let pg: StartedPostgres;
   let mq: StartedRabbitMQ;
   let app: INestApplication;
@@ -101,13 +101,14 @@ describe('Email flow (e2e: RabbitMQ -> Inbox -> worker -> Gmail)', () => {
       })
       .overrideProvider(workerConfig.KEY)
       .useValue({ enabled: false, pollIntervalMs: 999_999, claimBatchSize: 20 })
-      .overrideProvider(gmailConfig.KEY)
+      .overrideProvider(smtpConfig.KEY)
       .useValue({
-        sender: 'me',
-        clientId: '',
-        clientSecret: '',
-        refreshToken: '',
-        redirectUri: '',
+        host: 'smtp.test',
+        port: 465,
+        secure: true,
+        user: '',
+        password: '',
+        from: 'me',
       })
       .overrideProvider(CLOCK)
       .useValue(clock)
@@ -171,7 +172,7 @@ describe('Email flow (e2e: RabbitMQ -> Inbox -> worker -> Gmail)', () => {
     const processed = await worker.processBatch();
     expect(processed).toBe(1);
     expect(mailer.sent).toHaveLength(1);
-    expect(mailer.sent[0].recipient).toBe('to@example.com');
+    expect(mailer.sent[0].recipient).toBe('adriancapote95@gmail.com');
 
     const done = await emails().findOneByOrFail({ messageId: 'happy-1' });
     expect(done.status).toBe(EmailStatus.Success);
