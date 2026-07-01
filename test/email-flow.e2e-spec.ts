@@ -1,5 +1,5 @@
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { INestApplication } from '@nestjs/common';
+import { type MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { Test } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import { CLOCK } from '../src/common/clock/clock';
@@ -14,11 +14,14 @@ import {
 import { AppModule } from '../src/app.module';
 import { Email } from '../src/email/entities/email.entity';
 import { EmailStatus } from '../src/email/enums/email-status.enum';
-import { EmailIngestConsumer } from '../src/email/ingest/email-ingest.consumer';
+import { EMAIL_SENDER_ROUTING_KEY } from '../src/email/ingest/email-ingest.constants';
+import { EmailIngestService } from '../src/email/ingest/email-ingest.service';
 import { MAILER } from '../src/email/mailer/mailer.port';
 import { EmailWorkerService } from '../src/email/worker/email-worker.service';
+import { InboundEmailDeserializer } from '../src/rabbitmq/inbound-email.deserializer';
 import { FakeClock } from './support/fake-clock';
 import { FakeMailer } from './support/fake-mailer';
+import { createPublisher, RawPublisher } from './support/rabbit-publisher';
 import {
   startPostgres,
   StartedPostgres,
@@ -30,7 +33,7 @@ import {
 
 const EXCHANGE = 'google_email_sender';
 const QUEUE = 'google_email_sender_queue';
-const ROUTING_KEY = 'email_sender';
+const ROUTING_KEY = EMAIL_SENDER_ROUTING_KEY;
 
 function message(messageId: string) {
   return {
@@ -61,9 +64,9 @@ describe('Email flow (e2e: RabbitMQ -> Inbox -> worker -> Gmail)', () => {
   let mq: StartedRabbitMQ;
   let app: INestApplication;
   let dataSource: DataSource;
-  let amqp: AmqpConnection;
+  let publisher: RawPublisher;
   let worker: EmailWorkerService;
-  let consumer: EmailIngestConsumer;
+  let ingest: EmailIngestService;
   const clock = new FakeClock('2026-06-30T00:00:00.000Z');
   const mailer = new FakeMailer();
 
@@ -86,6 +89,7 @@ describe('Email flow (e2e: RabbitMQ -> Inbox -> worker -> Gmail)', () => {
         exchange: EXCHANGE,
         queue: QUEUE,
         routingKey: ROUTING_KEY,
+        prefetch: 10,
       })
       .overrideProvider(emailConfig.KEY)
       .useValue({
@@ -112,14 +116,34 @@ describe('Email flow (e2e: RabbitMQ -> Inbox -> worker -> Gmail)', () => {
       .compile();
 
     app = moduleRef.createNestApplication({ logger: ['error', 'warn'] });
+    // Attach the native RMQ consumer exactly as `main.ts` does (hybrid app).
+    app.connectMicroservice<MicroserviceOptions>(
+      {
+        transport: Transport.RMQ,
+        options: {
+          urls: [mq.url],
+          queue: QUEUE,
+          exchange: EXCHANGE,
+          exchangeType: 'topic',
+          routingKey: ROUTING_KEY,
+          queueOptions: { durable: true },
+          noAck: false,
+          prefetchCount: 10,
+          deserializer: new InboundEmailDeserializer(),
+        },
+      },
+      { inheritAppConfig: true },
+    );
     await app.init();
+    await app.startAllMicroservices();
 
-    amqp = app.get(AmqpConnection);
+    publisher = await createPublisher(mq.url);
     worker = app.get(EmailWorkerService);
-    consumer = app.get(EmailIngestConsumer);
+    ingest = app.get(EmailIngestService);
   }, 180_000);
 
   afterAll(async () => {
+    await publisher?.close();
     await app?.close();
     await dataSource?.destroy();
     await mq?.container?.stop();
@@ -133,7 +157,7 @@ describe('Email flow (e2e: RabbitMQ -> Inbox -> worker -> Gmail)', () => {
   });
 
   it('delivers a published message: pending -> processing -> success', async () => {
-    await amqp.publish(EXCHANGE, ROUTING_KEY, message('happy-1'));
+    publisher.publish(EXCHANGE, ROUTING_KEY, message('happy-1'));
 
     // Inbox: the consumer persists a pending row.
     await waitFor(
@@ -155,7 +179,7 @@ describe('Email flow (e2e: RabbitMQ -> Inbox -> worker -> Gmail)', () => {
   });
 
   it('retries a transient failure with backoff, then succeeds', async () => {
-    await amqp.publish(EXCHANGE, ROUTING_KEY, message('retry-1'));
+    publisher.publish(EXCHANGE, ROUTING_KEY, message('retry-1'));
     await waitFor(
       async () =>
         (await emails().count({ where: { messageId: 'retry-1' } })) === 1,
@@ -184,7 +208,7 @@ describe('Email flow (e2e: RabbitMQ -> Inbox -> worker -> Gmail)', () => {
   });
 
   it('marks fail after EMAIL_MAX_ATTEMPTS exhausted', async () => {
-    await amqp.publish(EXCHANGE, ROUTING_KEY, message('doomed-1'));
+    publisher.publish(EXCHANGE, ROUTING_KEY, message('doomed-1'));
     await waitFor(
       async () =>
         (await emails().count({ where: { messageId: 'doomed-1' } })) === 1,
@@ -205,23 +229,21 @@ describe('Email flow (e2e: RabbitMQ -> Inbox -> worker -> Gmail)', () => {
   });
 
   it('deduplicates a redelivered messageId (Inbox no-op)', async () => {
-    // Drive the consumer handler directly for a deterministic duplicate (no broker timing).
-    const ack1 = await consumer.handleMessage(message('dup-1'));
-    const ack2 = await consumer.handleMessage(message('dup-1'));
+    // Drive the ingest decision directly for a deterministic duplicate (no broker timing).
+    const first = await ingest.ingest(message('dup-1'));
+    const second = await ingest.ingest(message('dup-1'));
 
-    expect(ack1).toBeUndefined(); // ACK (stored)
-    expect(ack2).toBeUndefined(); // ACK (duplicate no-op, not an error)
+    expect(first).toBe('ack'); // stored
+    expect(second).toBe('ack'); // duplicate no-op, ACKed (not an error)
     expect(await emails().count({ where: { messageId: 'dup-1' } })).toBe(1);
   });
 
   it('rejects a malformed message without requeue', async () => {
-    const result = await consumer.handleMessage({
+    const decision = await ingest.ingest({
       tenantId: 't1',
       not: 'an email message',
     });
-    // Nack(requeue=false)
-    expect(result).toBeDefined();
-    expect((result as { requeue: boolean }).requeue).toBe(false);
+    expect(decision).toBe('drop'); // -> channel.nack(msg, false, false)
     expect(await emails().count()).toBe(0);
   });
 });
