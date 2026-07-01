@@ -153,7 +153,7 @@ describe('EmailRepository (integration, real Postgres)', () => {
   });
 
   it('deleteOldSuccess deletes only old successes, batched (AC-6.1/6.2/6.3)', async () => {
-    // 3 old successes (sent at T0)
+    // 3 old successes at T0
     const oldIds: string[] = [];
     for (let i = 0; i < 3; i++) {
       const { id } = await repo.insertPending({
@@ -165,7 +165,7 @@ describe('EmailRepository (integration, real Postgres)', () => {
     await repo.claimBatch(10); // sentAt = T0
     for (const id of oldIds) await repo.markSuccess(id);
 
-    // Move 40 days forward; 2 recent successes
+    // +40 days; 2 recent successes
     clock.advanceDays(40);
     for (let i = 0; i < 2; i++) {
       const { id } = await repo.insertPending({
@@ -175,7 +175,7 @@ describe('EmailRepository (integration, real Postgres)', () => {
       await repo.claimBatch(10); // sentAt = T0 + 40d
       await repo.markSuccess(id!);
     }
-    // a fail and a pending row that must survive
+    // a fail + a pending that must survive
     const { id: failId } = await repo.insertPending({
       ...baseInput,
       messageId: 'failed',
@@ -184,7 +184,7 @@ describe('EmailRepository (integration, real Postgres)', () => {
     await repo.markFailed(failId!, 5, 'dead');
     await repo.insertPending({ ...baseInput, messageId: 'pending' });
 
-    // cutoff = 30 days after T0 → only the 3 old successes qualify
+    // cutoff = T0 + 30d → only the 3 old successes qualify
     const cutoff = new Date(
       Date.parse('2026-06-30T00:00:00.000Z') + 30 * 24 * 60 * 60 * 1000,
     );
@@ -193,7 +193,6 @@ describe('EmailRepository (integration, real Postgres)', () => {
     expect(await repo.deleteOldSuccess(cutoff, 2)).toBe(1);
     expect(await repo.deleteOldSuccess(cutoff, 2)).toBe(0); // nothing left
 
-    // remaining: 2 recent success + 1 fail + 1 pending = 4
     expect(await count()).toBe(4);
   });
 });

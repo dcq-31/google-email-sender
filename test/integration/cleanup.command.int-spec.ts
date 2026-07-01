@@ -66,7 +66,7 @@ describe('CleanupCommand (integration, real Postgres)', () => {
       await repo.claimBatch(10);
       await repo.markSuccess(id!);
     }
-    // advance 40 days; 1 recent success + 1 pending survive
+    // +40 days; 1 recent success + 1 pending survive
     clock.advanceDays(40);
     const { id: recentId } = await repo.insertPending({
       ...baseInput,
@@ -76,7 +76,7 @@ describe('CleanupCommand (integration, real Postgres)', () => {
     await repo.markSuccess(recentId!);
     await repo.insertPending({ ...baseInput, messageId: 'pending' });
 
-    // run cleanup "now" = T0 + 40 days → cutoff = now - 30d → the 5 old successes qualify
+    // cleanup at T0 + 40d → cutoff = now - 30d → 5 old successes qualify
     const command = new CleanupCommand(repo, clock, emailCfg());
     await command.run();
 

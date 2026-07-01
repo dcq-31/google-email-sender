@@ -12,13 +12,11 @@ export class FakeMailer implements MailerPort {
   private failuresRemaining = 0;
   private failWith: Error = new Error('FakeMailer: simulated send failure');
 
-  /** Make the next `count` sends throw. */
   failNext(count: number, error?: Error): void {
     this.failuresRemaining = count;
     if (error) this.failWith = error;
   }
 
-  /** Make every send throw until reset. */
   failAlways(error?: Error): void {
     this.failuresRemaining = Number.POSITIVE_INFINITY;
     if (error) this.failWith = error;

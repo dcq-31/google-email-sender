@@ -12,22 +12,18 @@ export class FakeClock implements Clock {
     return new Date(this.current);
   }
 
-  /** Set the clock to an absolute instant. */
   set(at: Date | string | number): void {
     this.current = new Date(at);
   }
 
-  /** Move the clock forward by N seconds. */
   advanceSeconds(seconds: number): void {
     this.current = new Date(this.current.getTime() + seconds * 1000);
   }
 
-  /** Move the clock forward by N milliseconds. */
   advanceMs(ms: number): void {
     this.current = new Date(this.current.getTime() + ms);
   }
 
-  /** Move the clock forward by N days. */
   advanceDays(days: number): void {
     this.advanceSeconds(days * 24 * 60 * 60);
   }

@@ -10,10 +10,8 @@ interface SendTestOptions {
 }
 
 /**
- * Sends one test email through the configured SMTP mailer to verify it works.
- * Uses the same `SMTP_*` config as the running service, so a success means the real sender delivers.
- *
- * Run with: `pnpm cli email:send-test [recipient]`
+ * Sends one test email through the configured SMTP mailer; a success proves the real sender works
+ * (same `SMTP_*` config as the running service).
  */
 @Command({
   name: 'email:send-test',

@@ -35,7 +35,6 @@ export async function startPostgres(): Promise<StartedPostgres> {
   return { container, dataSource, url };
 }
 
-/** Removes all rows between tests. */
 export async function truncateEmails(dataSource: DataSource): Promise<void> {
   await dataSource.query('TRUNCATE TABLE emails');
 }

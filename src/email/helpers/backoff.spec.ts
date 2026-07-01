@@ -4,10 +4,10 @@ describe('nextDelaySeconds', () => {
   const base = { baseSeconds: 60 };
 
   it('grows exponentially from the base delay', () => {
-    expect(nextDelaySeconds(1, base)).toBe(60); // 60 * 2^0
-    expect(nextDelaySeconds(2, base)).toBe(120); // 60 * 2^1
-    expect(nextDelaySeconds(3, base)).toBe(240); // 60 * 2^2
-    expect(nextDelaySeconds(4, base)).toBe(480); // 60 * 2^3
+    expect(nextDelaySeconds(1, base)).toBe(60);
+    expect(nextDelaySeconds(2, base)).toBe(120);
+    expect(nextDelaySeconds(3, base)).toBe(240);
+    expect(nextDelaySeconds(4, base)).toBe(480);
   });
 
   it('clamps a failureCount below 1 to the first-attempt delay', () => {
@@ -26,7 +26,7 @@ describe('nextDelaySeconds', () => {
 describe('computeNextAttemptAt', () => {
   it('adds the delay (seconds) to now', () => {
     const now = new Date('2026-06-30T00:00:00.000Z');
-    const at = computeNextAttemptAt(now, 2, { baseSeconds: 60 }); // +120s
+    const at = computeNextAttemptAt(now, 2, { baseSeconds: 60 });
     expect(at.toISOString()).toBe('2026-06-30T00:02:00.000Z');
   });
 

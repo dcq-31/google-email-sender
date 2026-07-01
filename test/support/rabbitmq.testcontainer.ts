@@ -8,7 +8,6 @@ export interface StartedRabbitMQ {
   url: string;
 }
 
-/** Boots a real `rabbitmq:3-management` and returns its AMQP URL. */
 export async function startRabbitMQ(): Promise<StartedRabbitMQ> {
   const container = await new RabbitMQContainer(
     'rabbitmq:3-management',

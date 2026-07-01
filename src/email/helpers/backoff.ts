@@ -1,7 +1,7 @@
 export interface BackoffOptions {
-  /** Base delay in seconds (`EMAIL_RETRY_BASE_DELAY_SECONDS`). */
+  /** Base delay in seconds. */
   baseSeconds: number;
-  /** Optional cap so the delay can't grow without bound (`EMAIL_RETRY_MAX_DELAY_SECONDS`). */
+  /** Optional cap on the backoff delay. */
   maxSeconds?: number;
 }
 
@@ -22,7 +22,7 @@ export function nextDelaySeconds(
   return opts.maxSeconds != null ? Math.min(raw, opts.maxSeconds) : raw;
 }
 
-/** The earliest {@link Date} a retry is allowed, relative to `now`. */
+/** Earliest {@link Date} a retry is allowed, relative to `now`. */
 export function computeNextAttemptAt(
   now: Date,
   failureCount: number,

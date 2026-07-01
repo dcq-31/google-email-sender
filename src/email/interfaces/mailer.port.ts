@@ -1,4 +1,3 @@
-/** A single outbound email, vendor-agnostic. */
 export interface OutboundEmail {
   recipient: string;
   subject: string;
@@ -14,5 +13,4 @@ export interface MailerPort {
   send(email: OutboundEmail): Promise<void>;
 }
 
-/** DI token for {@link MailerPort}. */
 export const MAILER = Symbol('MAILER');

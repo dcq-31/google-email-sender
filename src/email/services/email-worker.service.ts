@@ -64,7 +64,7 @@ export class EmailWorkerService implements OnModuleInit, OnModuleDestroy {
 
   /** One poll cycle. Public so tests can drive it deterministically. */
   async tick(): Promise<number> {
-    if (this.ticking) return 0; // overlap guard
+    if (this.ticking) return 0;
     this.ticking = true;
     try {
       return await this.processBatch();
@@ -78,7 +78,7 @@ export class EmailWorkerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /** Claims and processes a single batch; returns the number of rows processed. */
+  /** Claims and processes one batch; returns the count. */
   async processBatch(): Promise<number> {
     const claimed = await this.repo.claimBatch(this.worker.claimBatchSize);
     for (const email of claimed) {

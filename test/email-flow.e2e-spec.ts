@@ -77,7 +77,7 @@ describe('Email flow (e2e: RabbitMQ -> Inbox -> worker -> SMTP)', () => {
     mq = await startRabbitMQ();
     dataSource = pg.dataSource;
 
-    // Override each config namespace with test values (dynamic container URLs, worker off).
+    // Override config namespaces with test values (dynamic URLs, worker off).
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(appConfig.KEY)
       .useValue({ nodeEnv: 'test', httpPort: 0 })
@@ -117,7 +117,7 @@ describe('Email flow (e2e: RabbitMQ -> Inbox -> worker -> SMTP)', () => {
       .compile();
 
     app = moduleRef.createNestApplication({ logger: ['error', 'warn'] });
-    // Attach the native RMQ consumer exactly as `main.ts` does (hybrid app).
+    // Attach the RMQ consumer as `main.ts` does (hybrid app).
     app.connectMicroservice<MicroserviceOptions>(
       {
         transport: Transport.RMQ,
@@ -196,10 +196,9 @@ describe('Email flow (e2e: RabbitMQ -> Inbox -> worker -> SMTP)', () => {
     expect(row.lastErrorMessage).toContain('smtp 421');
     expect(mailer.sent).toHaveLength(0);
 
-    // Not due yet -> nothing claimed.
     expect(await worker.processBatch()).toBe(0);
 
-    // Advance past the backoff and retry -> success.
+    // Advance past the backoff -> success.
     clock.advanceSeconds(61);
     expect(await worker.processBatch()).toBe(1);
 
@@ -216,7 +215,7 @@ describe('Email flow (e2e: RabbitMQ -> Inbox -> worker -> SMTP)', () => {
     );
 
     mailer.failAlways(new Error('hard bounce'));
-    // maxAttempts = 3 -> 3 attempts then fail. Advance clock past each backoff.
+    // maxAttempts = 3: 3 attempts then fail; advance past each backoff.
     await worker.processBatch(); // attempt 1 -> pending (count 1)
     clock.advanceSeconds(61);
     await worker.processBatch(); // attempt 2 -> pending (count 2)

@@ -4,9 +4,7 @@
  * it depends on this interface instead.
  */
 export interface Clock {
-  /** The current instant. */
   now(): Date;
 }
 
-/** DI token for {@link Clock}. */
 export const CLOCK = Symbol('CLOCK');

@@ -6,7 +6,6 @@ import { CLOCK, type Clock } from '../../common/clock/clock';
 import { Email } from '../entities/email.entity';
 import { EmailStatus } from '../enums/email-status.enum';
 
-/** Fields supplied by the producer when a message is ingested. */
 export interface NewEmailInput {
   tenantId: string;
   tenantName: string;
@@ -17,7 +16,7 @@ export interface NewEmailInput {
   body: string;
 }
 
-/** Minimal projection of a row claimed by a worker for sending. */
+/** A row claimed for sending. */
 export interface ClaimedEmail {
   id: string;
   recipient: string;
@@ -110,12 +109,11 @@ export class EmailRepository {
     }));
   }
 
-  /** Marks a claimed row as successfully sent. */
   async markSuccess(id: string): Promise<void> {
     await this.repo.update({ id }, { status: EmailStatus.Success });
   }
 
-  /** Records a transient failure and reschedules the row to `pending` at `nextAttemptAt`. */
+  /** Records a transient failure and reschedules the row for retry. */
   async markRetry(
     id: string,
     failureCount: number,

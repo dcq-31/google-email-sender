@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 
-/** Liveness endpoint for orchestrators (k8s, compose healthchecks). */
+/** Liveness probe endpoint. */
 @Controller('health')
 export class HealthController {
   @Get()

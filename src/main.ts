@@ -23,8 +23,7 @@ async function bootstrap(): Promise<void> {
       options: {
         urls: [rabbit.url],
         queue: rabbit.queue,
-        // Bind the durable queue to the existing topic exchange with the contract's routing key.
-        // Nest asserts the exchange + queue and binds them; producers keep publishing raw JSON.
+        // Nest asserts + binds the queue to the topic exchange; producers publish raw JSON.
         exchange: rabbit.exchange,
         exchangeType: 'topic',
         routingKey: EMAIL_SENDER_ROUTING_KEY,

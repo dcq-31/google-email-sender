@@ -5,12 +5,7 @@ import { CLOCK, type Clock } from '../common/clock/clock';
 import { emailConfig } from '../config/namespaces';
 import { EmailRepository } from '../email/repositories/email.repository';
 
-/**
- * Deletes `success` emails whose `sent_at` is older than `EMAIL_SUCCESS_RETENTION_DAYS`,
- * in batches of `EMAIL_CLEANUP_BATCH_SIZE`, until none remain.
- *
- * Run with: `pnpm cli email:cleanup`
- */
+/** Deletes `success` emails older than `EMAIL_SUCCESS_RETENTION_DAYS`, in batches, until none remain. */
 @Command({
   name: 'email:cleanup',
   description:
